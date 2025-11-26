@@ -18,7 +18,7 @@
             height: 100dvh;
             margin: 0;
             overflow: hidden;
-            background: #000;
+            background: #05070a; /* Fallback dark blue instead of black */
             touch-action: none; /* Prevents scroll rubber-banding on mobile */
         }
         
@@ -222,8 +222,10 @@
         // Adjusted epsilon calculation for shader compatibility
         #define EPSILON_NRM (0.1 / iResolution.x)
 
+        // REDUCED ITERATIONS FOR MOBILE SAFETY
         const int ITER_GEOMETRY = 3;
-        const int ITER_FRAGMENT = 5;
+        const int ITER_FRAGMENT = 4; // Reduced from 5 to 4 to prevent TDR timeouts
+        
         const float SEA_HEIGHT = 0.6;
         const float SEA_CHOPPY = 4.0;
         const float SEA_SPEED = 0.8;
@@ -248,7 +250,7 @@
         }
 
         float diffuse(vec3 n,vec3 l,float p) {
-            return pow(dot(n,l) * 0.4 + 0.6,p);
+            return pow(max(dot(n,l) * 0.4 + 0.6, 0.0), p); // SAFE CLAMP
         }
         
         float specular(vec3 n,vec3 l,vec3 e,float s) {
@@ -268,7 +270,12 @@
             vec2 wv = 1.0-abs(sin(uv));
             vec2 swv = abs(cos(uv));    
             wv = mix(wv,swv,wv);
-            return pow(1.0-pow(wv.x * wv.y,0.65),choppy);
+            
+            // --- CRITICAL MOBILE FIX: NaN GUARD ---
+            // If wv.x*wv.y > 1.0 (due to float precision), 1.0-pow is negative.
+            // pow(negative, choppy) = NaN (Black Screen).
+            // We must Clamp inner value to >= 0.0
+            return pow(max(1.0-pow(wv.x * wv.y,0.65), 0.0),choppy);
         }
 
         float map(vec3 p) {
@@ -357,10 +364,25 @@
         void main() {
             vec2 uv = gl_FragCoord.xy / iResolution.xy;
             uv = uv * 2.0 - 1.0;
-            uv.x *= iResolution.x / iResolution.y;    
+            
+            // Calculate Aspect Ratio explicitly
+            float aspect = iResolution.x / iResolution.y;
+            uv.x *= aspect; 
+            
+            // --- MOBILE ZOOM FIX ---
+            // If aspect < 1.0 (Portrait Mode), we zoom out (increase FOV)
+            // and lift the camera higher so we don't get stuck in a wave trough.
+            float mobileFactor = 1.0;
+            float camHeight = 3.5;
+            
+            if (aspect < 1.0) {
+                uv *= 1.8;       // Zoom out (Wider Field of View)
+                camHeight = 5.5; // Lift camera up to see more ocean surface
+            }
+
             float time = iGlobalTime * 0.3;
                 
-            vec3 ori = vec3(0.0, 3.5, time*5.0);
+            vec3 ori = vec3(0.0, camHeight, time*5.0);
             vec3 dir = normalize(vec3(uv.xy, -2.0)); 
             dir.z += length(uv) * 0.15;
             dir = normalize(dir);
@@ -377,6 +399,10 @@
                 getSeaColor(p,n,light,dir,dist),
                 pow(smoothstep(0.0,-0.05,dir.y),0.3)
             );
+            
+            // --- CRITICAL MOBILE FIX: FINAL COLOR CLAMP ---
+            // Ensure no negative colors before gamma correction
+            color = max(color, 0.0);
             
             gl_FragColor = vec4(pow(color,vec3(0.8)), 1.0);
         }
