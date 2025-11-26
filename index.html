@@ -212,11 +212,11 @@
         const float PI = 3.141592;
         #define EPSILON_NRM (0.1 / iResolution.x)
 
-        // --- 2. MOBILE SPECIFIC SETTINGS (INJECTED VIA JS) ---
+        // --- 2. MOBILE SPECIFIC SETTINGS (TUNED FOR VISIBILITY) ---
         #ifdef IS_MOBILE
-            const int NUM_STEPS = 4;        // Minimal raymarch steps
-            const int ITER_GEOMETRY = 2;    // Minimal wave detail
-            const int ITER_FRAGMENT = 3;    // Minimal surface detail
+            const int NUM_STEPS = 6;        // Increased from 4 to 6 for better definition
+            const int ITER_GEOMETRY = 3;    // Restored to 3 (same as desktop) for actual waves
+            const int ITER_FRAGMENT = 4;    // Increased from 3 to 4 for better reflections
         #else
             const int NUM_STEPS = 8;
             const int ITER_GEOMETRY = 3;
@@ -268,14 +268,9 @@
             vec2 swv = abs(cos(uv));    
             wv = mix(wv,swv,wv);
             
-            // --- 3. SAFE MATH FOR MOBILE ---
-            // On mobile, complex pow() chains often return NaN (Black Screen).
-            // We simplify the math if IS_MOBILE is set.
-            #ifdef IS_MOBILE
-                return pow(max(1.0 - wv.x * wv.y, 0.0), choppy);
-            #else
-                return pow(max(1.0 - pow(wv.x * wv.y, 0.65), 0.0), choppy);
-            #endif
+            // WE USE THE HIGH QUALITY MATH FOR MOBILE NOW TOO
+            // This ensures the waves don't look flat
+            return pow(max(1.0 - pow(wv.x * wv.y, 0.65), 0.0), choppy);
         }
 
         float map(vec3 p) {
@@ -284,7 +279,7 @@
             float choppy = SEA_CHOPPY;
             vec2 uv = p.xz; uv.x *= 0.75;
             
-            float d, h = 0.0;    
+            float d, h = 0.0;     
             for(int i = 0; i < ITER_GEOMETRY; i++) {        
                 d = sea_octave((uv+SEA_TIME)*freq,choppy);
                 d += sea_octave((uv-SEA_TIME)*freq,choppy);
@@ -301,7 +296,7 @@
             float choppy = SEA_CHOPPY;
             vec2 uv = p.xz; uv.x *= 0.75;
             
-            float d, h = 0.0;    
+            float d, h = 0.0;     
             for(int i = 0; i < ITER_FRAGMENT; i++) {        
                 d = sea_octave((uv+SEA_TIME)*freq,choppy);
                 d += sea_octave((uv-SEA_TIME)*freq,choppy);
@@ -368,13 +363,10 @@
             float aspect = iResolution.x / iResolution.y;
             uv.x *= aspect; 
             
-            // --- 4. CAMERA ADJUSTMENT FOR MOBILE ---
+            // --- 3. CAMERA ADJUSTMENT ---
+            // We use the SAME height as desktop now to ensure waves look big enough
             float camHeight = 3.5;
-            #ifdef IS_MOBILE
-                uv *= 1.5;      // Wider angle
-                camHeight = 5.0; // Higher up
-            #endif
-
+            
             float time = iGlobalTime * 0.3;
                 
             vec3 ori = vec3(0.0, camHeight, time*5.0);
