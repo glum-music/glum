@@ -212,11 +212,11 @@
         const float PI = 3.141592;
         #define EPSILON_NRM (0.1 / iResolution.x)
 
-        // --- 2. MOBILE SPECIFIC SETTINGS (TUNED FOR VISIBILITY) ---
+        // --- 2. MOBILE SPECIFIC SETTINGS ---
         #ifdef IS_MOBILE
-            const int NUM_STEPS = 6;        // Increased from 4 to 6 for better definition
-            const int ITER_GEOMETRY = 3;    // Restored to 3 (same as desktop) for actual waves
-            const int ITER_FRAGMENT = 4;    // Increased from 3 to 4 for better reflections
+            const int NUM_STEPS = 6;        
+            const int ITER_GEOMETRY = 3;    
+            const int ITER_FRAGMENT = 4;    
         #else
             const int NUM_STEPS = 8;
             const int ITER_GEOMETRY = 3;
@@ -268,8 +268,7 @@
             vec2 swv = abs(cos(uv));    
             wv = mix(wv,swv,wv);
             
-            // WE USE THE HIGH QUALITY MATH FOR MOBILE NOW TOO
-            // This ensures the waves don't look flat
+            // High quality wave math for both platforms
             return pow(max(1.0 - pow(wv.x * wv.y, 0.65), 0.0), choppy);
         }
 
@@ -363,10 +362,13 @@
             float aspect = iResolution.x / iResolution.y;
             uv.x *= aspect; 
             
-            // --- 3. CAMERA ADJUSTMENT ---
-            // We use the SAME height as desktop now to ensure waves look big enough
+            // --- 3. HORIZON ADJUSTMENT (Mobile Only) ---
+            #ifdef IS_MOBILE
+                // Tilts camera down to bring horizon UP to middle of screen
+                uv.y -= 0.3; 
+            #endif
+
             float camHeight = 3.5;
-            
             float time = iGlobalTime * 0.3;
                 
             vec3 ori = vec3(0.0, camHeight, time*5.0);
@@ -387,7 +389,6 @@
                 pow(smoothstep(0.0,-0.05,dir.y),0.3)
             );
             
-            // Final safety clamp
             color = max(color, 0.0);
             
             gl_FragColor = vec4(pow(color,vec3(0.8)), 1.0);
