@@ -77,10 +77,11 @@
             height: 100%;
             z-index: 4; /* On top of everything */
             pointer-events: none; 
-            background: radial-gradient(circle, 
+            /* Changed to ELLIPSE to fit mobile screens better without crushing the sides */
+            background: radial-gradient(ellipse at center, 
                 rgba(0,0,0,0) 40%, 
-                rgba(0,0,0,0.6) 80%, 
-                rgba(0,0,0,0.95) 100%
+                rgba(0,0,0,0.5) 80%, 
+                rgba(0,0,0,0.9) 100%
             );
         }
 
@@ -209,9 +210,9 @@
     </script>
 
     <script id="fragment-shader" type="x-shader/x-fragment">
-        // CRITICAL FIX: Explicit precision for mobile GPUs
-        precision mediump float;
-        precision mediump int;
+        // CRITICAL FIX: Switched back to highp. 'mediump' causes black screens on ocean shaders.
+        precision highp float;
+        precision highp int;
 
         uniform float iGlobalTime;
         uniform vec2 iResolution;
@@ -369,15 +370,15 @@
             float aspect = iResolution.x / iResolution.y;
             uv.x *= aspect; 
             
-            // --- MOBILE ZOOM FIX ---
-            // If aspect < 1.0 (Portrait Mode), we zoom out (increase FOV)
-            // and lift the camera higher so we don't get stuck in a wave trough.
-            float mobileFactor = 1.0;
+            // --- MOBILE ZOOM & LIFT FIX ---
+            // If aspect < 1.0 (Portrait Mode), the screen is tall.
+            // We Zoom Out (uv * 2.5) to widen the FOV.
+            // We Lift Camera (camHeight = 8.0) to look down from higher up.
             float camHeight = 3.5;
             
             if (aspect < 1.0) {
-                uv *= 1.8;       // Zoom out (Wider Field of View)
-                camHeight = 5.5; // Lift camera up to see more ocean surface
+                uv *= 2.5;       // Stronger zoom out to show horizon
+                camHeight = 8.0; // Lift camera higher to avoid "stuck in wave" look
             }
 
             float time = iGlobalTime * 0.3;
@@ -404,7 +405,8 @@
             // Ensure no negative colors before gamma correction
             color = max(color, 0.0);
             
-            gl_FragColor = vec4(pow(color,vec3(0.8)), 1.0);
+            // Slightly brighter gamma for mobile (0.7 vs 0.8) to fight the darkness
+            gl_FragColor = vec4(pow(color,vec3(0.7)), 1.0);
         }
     </script>
 
@@ -420,7 +422,7 @@
             antialias: true, 
             alpha: false,
             powerPreference: "high-performance",
-            precision: "mediump" // Force medium precision for mobile
+            precision: "highp" // Changed to highp for quality
         });
         
         // CRITICAL FIX: Clamp Pixel Ratio to max 2.0 to prevent mobile overheat/crash
