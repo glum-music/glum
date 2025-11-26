@@ -45,6 +45,13 @@
             pointer-events: none;
             opacity: 0.9;
         }
+
+        /* --- ADD THIS BLOCK BELOW --- */
+                @media (max-width: 768px) and (orientation: portrait) {
+                    #logo-overlay {
+                        top: 25%; /* 25% is higher up than the default 50% */
+                    }
+                }
         
         #logo-overlay img {
             width: 100%;
