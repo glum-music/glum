@@ -3,86 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TourBuddy - Immersive Night</title>
+    <title>TourBuddy - Immersive View</title>
     
+    <!-- Load Tailwind CSS for the player styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* CORE SETUP */
+        /* CRITICAL MOBILE FIX: Force 100dvh to handle mobile address bars correctly */
         html, body {
             width: 100%;
-            height: 100dvh; /* Mobile viewport fix */
+            height: 100dvh;
             margin: 0;
             overflow: hidden;
-            background: #020203; /* Deep black fallback */
-            touch-action: none; /* Prevents scrolling */
+            background: #05070a; /* Fallback dark blue instead of black */
+            touch-action: none; /* Prevents scroll rubber-banding on mobile */
         }
         
-        /* LAYERS */
+        /* LAYERING ORDER */
         #webgl-container { position: absolute; top: 0; left: 0; z-index: 1; }
         
+        /* Logo: Centered, behind rain/vignette */
         #logo-overlay {
             position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Perfect center */
             z-index: 2; 
-            width: 70vw;
-            max-width: 900px;
-            pointer-events: none;
-            opacity: 0.9;
+            width: 70vw;        /* Bigger */
+            max-width: 900px; /* Allows it to grow */
+            min-width: 300px; /* Optional */
+            pointer-events: none; /* Clicks pass through */
+            opacity: 0.9; /* Slight transparency for blending */
         }
         
         #logo-overlay img {
             width: 100%;
             height: auto;
             display: block;
-            mask-image: radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
-            -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%);
-            filter: drop-shadow(0 0 30px rgba(0,0,0,0.9)); 
+
+            /* Radial fade mask: center opaque → edges transparent */
+            mask-image: radial-gradient(circle,
+                rgba(0,0,0,1) 40%,
+                rgba(0,0,0,0) 100%
+            );
+
+            -webkit-mask-image: radial-gradient(circle,
+                rgba(0,0,0,1) 40%,
+                rgba(0,0,0,0) 100%
+            );
+
+            filter: drop-shadow(0 0 20px rgba(0,0,0,0.8)); 
         }
 
         #rain-canvas { 
-            position: absolute; top: 0; left: 0; 
-            z-index: 3; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 3; /* Rain is ON TOP of the logo */
             pointer-events: none; 
             mix-blend-mode: screen; 
-            opacity: 0.6; 
+            opacity: 0.4; 
         }
         
+        /* --- VIGNETTE OVERLAY --- */
         #vignette {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 4;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 4; /* On top of everything */
             pointer-events: none; 
-            background: radial-gradient(circle, 
-                rgba(0,0,0,0) 50%, 
+            /* Changed to ELLIPSE to fit mobile screens better without crushing the sides */
+            background: radial-gradient(ellipse at center, 
+                rgba(0,0,0,0) 40%, 
                 rgba(0,0,0,0.5) 80%, 
-                rgba(0,0,0,0.95) 100%
+                rgba(0,0,0,0.9) 100%
             );
         }
 
-        /* UI STYLING */
+        /* --- PLAYER STYLES --- */
+        /* Custom Glass Effect matching the dark/orange theme */
         .glass-card {
-            background: rgba(10, 10, 12, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.3); /* High transparency */
+            backdrop-filter: blur(8px);      /* Blur helps readability */
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
         }
         
-        input[type=range] { -webkit-appearance: none; background: transparent; }
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent; 
+        }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 12px; width: 12px;
+            height: 12px;
+            width: 12px;
             border-radius: 50%;
             background: #ffffff;
             cursor: pointer;
             margin-top: -4px; 
-            box-shadow: 0 0 10px rgba(255,165,0,0.6);
+            box-shadow: 0 0 10px rgba(255,165,0,0.5); /* Orange glow */
         }
         input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px;
+            width: 100%;
+            height: 4px;
             cursor: pointer;
             border-radius: 999px;
         }
@@ -95,53 +125,82 @@
     <div id="webgl-container"></div>
     
     <div id="logo-overlay">
-        <img src="Glum.png" onerror="this.style.display='none'" alt="Logo">
+        <!-- Placeholder for your logo -->
+        <img src="Glum.png" onerror="this.style.display='none'" alt="Band Logo">
     </div>
 
     <canvas id="rain-canvas"></canvas>
     <div id="vignette"></div>
 
+    <!-- --- MUSIC PLAYER UI --- -->
     <div id="music-player" class="fixed bottom-6 right-6 z-50 w-80 glass-card rounded-xl p-4 pointer-events-auto transition-opacity duration-500">
+        <!-- Track Info -->
         <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded bg-white/5 flex items-center justify-center text-orange-500 border border-white/5">
+            <div class="w-10 h-10 rounded bg-white/5 flex items-center justify-center text-orange-500 border border-white/10">
                 <i data-lucide="music" class="w-5 h-5"></i>
             </div>
             <div class="flex-1 min-w-0">
-                <div id="track-title" class="text-sm font-bold text-gray-100 truncate font-sans">Loading...</div>
-                <div class="text-[10px] text-orange-200/50 uppercase tracking-wider">Dark Ambience</div>
+                <div id="track-title" class="text-sm font-bold text-white truncate font-sans">
+                    Loading...
+                </div>
+                <div class="text-[10px] text-orange-200/60 uppercase tracking-wider">
+                    System Audio
+                </div>
             </div>
         </div>
 
+        <!-- Progress Bar -->
         <div class="mb-3 group relative">
-            <input type="range" id="progress-bar" min="0" max="100" value="0" class="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer" />
-            <div id="progress-fill" class="absolute top-[6px] left-0 h-1 rounded-lg pointer-events-none bg-gradient-to-r from-orange-800 to-orange-500" style="width: 0%"></div>
+            <input 
+                type="range" 
+                id="progress-bar"
+                min="0" 
+                max="100" 
+                value="0" 
+                class="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
+            />
+            <!-- Custom background div for the gradient fill -->
+            <div id="progress-fill" class="absolute top-[6px] left-0 h-1 rounded-lg pointer-events-none bg-gradient-to-r from-orange-700 to-orange-500" style="width: 0%"></div>
         </div>
 
         <div class="flex items-center justify-between">
+            <!-- Volume -->
             <div class="flex items-center gap-2 w-24">
-                <button id="mute-btn" class="text-gray-500 hover:text-white transition-colors">
+                <button id="mute-btn" class="text-gray-400 hover:text-white transition-colors">
                     <i id="vol-icon" data-lucide="volume-2" class="w-4 h-4"></i>
                 </button>
                 <div class="relative w-full h-4 flex items-center">
-                    <input type="range" id="vol-bar" min="0" max="1" step="0.05" value="0.5" class="relative z-10 w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer" />
-                    <div id="vol-fill" class="absolute left-0 h-1 rounded-lg pointer-events-none bg-gradient-to-r from-orange-800 to-orange-500" style="width: 50%"></div>
+                    <input 
+                        type="range" 
+                        id="vol-bar"
+                        min="0" 
+                        max="1" 
+                        step="0.05" 
+                        value="0.5" 
+                        class="relative z-10 w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div id="vol-fill" class="absolute left-0 h-1 rounded-lg pointer-events-none bg-gradient-to-r from-orange-700 to-orange-500" style="width: 50%"></div>
                 </div>
             </div>
 
+            <!-- Controls -->
             <div class="flex items-center gap-3">
-                <button id="prev-btn" class="text-gray-500 hover:text-white transition-colors hover:scale-110 transform duration-200">
+                <button id="prev-btn" class="text-gray-400 hover:text-white transition-colors hover:scale-110 transform duration-200">
                     <i data-lucide="skip-back" class="w-5 h-5"></i>
                 </button>
-                <button id="play-btn" class="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-800 to-orange-950 hover:from-orange-700 hover:to-orange-900 flex items-center justify-center text-white shadow-lg shadow-black/50 transition-all hover:scale-110 border border-white/10">
+                
+                <button id="play-btn" class="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-700 to-orange-900 hover:from-orange-600 hover:to-orange-800 flex items-center justify-center text-white shadow-lg shadow-orange-900/40 transition-all hover:scale-110 hover:shadow-orange-500/20 border border-white/10">
                     <i id="play-icon" data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
                 </button>
-                <button id="next-btn" class="text-gray-500 hover:text-white transition-colors hover:scale-110 transform duration-200">
+                
+                <button id="next-btn" class="text-gray-400 hover:text-white transition-colors hover:scale-110 transform duration-200">
                     <i data-lucide="skip-forward" class="w-5 h-5"></i>
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- SHADERS -->
     <script id="vertex-shader" type="x-shader/x-vertex">
         varying vec2 vUv;
         void main() {
@@ -151,6 +210,7 @@
     </script>
 
     <script id="fragment-shader" type="x-shader/x-fragment">
+        // CRITICAL FIX: Switched back to highp. 'mediump' causes black screens on ocean shaders.
         precision highp float;
         precision highp int;
 
@@ -160,21 +220,19 @@
         const int NUM_STEPS = 8;
         const float PI = 3.141592;
         const float EPSILON = 1e-3;
+        // Adjusted epsilon calculation for shader compatibility
         #define EPSILON_NRM (0.1 / iResolution.x)
 
-        // ITERATION COUNT: Kept low for Mobile Stability
+        // REDUCED ITERATIONS FOR MOBILE SAFETY
         const int ITER_GEOMETRY = 3;
-        const int ITER_FRAGMENT = 5; 
+        const int ITER_FRAGMENT = 4; // Reduced from 5 to 4 to prevent TDR timeouts
         
         const float SEA_HEIGHT = 0.6;
         const float SEA_CHOPPY = 4.0;
         const float SEA_SPEED = 0.8;
         const float SEA_FREQ = 0.16;
-        
-        // DARK THEME COLORS
-        const vec3 SEA_BASE = vec3(0.01, 0.01, 0.02); // Almost black
-        const vec3 SEA_WATER_COLOR = vec3(0.05, 0.15, 0.3); // Dark blue tint
-        
+        const vec3 SEA_BASE = vec3(0.0, 0.01, 0.02); 
+        const vec3 SEA_WATER_COLOR = vec3(0.1, 0.15, 0.25); 
         #define SEA_TIME (1.0 + iGlobalTime * SEA_SPEED)
         const mat2 octave_m = mat2(1.6,1.2,-1.2,1.6);
 
@@ -193,7 +251,7 @@
         }
 
         float diffuse(vec3 n,vec3 l,float p) {
-            return pow(max(dot(n,l) * 0.4 + 0.6, 0.0), p);
+            return pow(max(dot(n,l) * 0.4 + 0.6, 0.0), p); // SAFE CLAMP
         }
         
         float specular(vec3 n,vec3 l,vec3 e,float s) {
@@ -203,10 +261,9 @@
 
         vec3 getSkyColor(vec3 e) {
             e.y = max(e.y,0.0);
-            // NIGHT SKY GRADIENT
-            vec3 darkSky = vec3(0.01, 0.01, 0.01);
-            vec3 horizon = vec3(0.02, 0.03, 0.08); 
-            return mix(horizon, darkSky, pow(e.y, 0.4));
+            vec3 darkSky = vec3(0.01, 0.01, 0.03);
+            vec3 horizon = vec3(0.04, 0.06, 0.12); 
+            return mix(horizon, darkSky, pow(e.y, 0.6));
         }
 
         float sea_octave(vec2 uv, float choppy) {
@@ -216,8 +273,9 @@
             wv = mix(wv,swv,wv);
             
             // --- CRITICAL MOBILE FIX: NaN GUARD ---
-            // We clamp the result to 0.0 to prevent negative numbers entering pow()
-            // This stops the "Black Screen" on mobile GPUs
+            // If wv.x*wv.y > 1.0 (due to float precision), 1.0-pow is negative.
+            // pow(negative, choppy) = NaN (Black Screen).
+            // We must Clamp inner value to >= 0.0
             return pow(max(1.0-pow(wv.x * wv.y,0.65), 0.0),choppy);
         }
 
@@ -286,12 +344,12 @@
             float tm = 0.0;
             float tx = 1000.0;    
             float hx = map(ori + dir * tx);
-            if(hx > 0.0) return tx;    
+            if(hx > 0.0) return tx;   
             float hm = map(ori + dir * tm);    
             float tmid = 0.0;
             for(int i = 0; i < NUM_STEPS; i++) {
                 tmid = mix(tm,tx, hm/(hm-hx));                    
-                p = ori + dir * tmid;                      
+                p = ori + dir * tmid;                     
                 float hmid = map(p);
                 if(hmid < 0.0) {
                     tx = tmid;
@@ -308,22 +366,26 @@
             vec2 uv = gl_FragCoord.xy / iResolution.xy;
             uv = uv * 2.0 - 1.0;
             
+            // Calculate Aspect Ratio explicitly
             float aspect = iResolution.x / iResolution.y;
             uv.x *= aspect; 
             
-            // --- MOBILE LAYOUT ADJUSTMENTS ---
-            // Lift camera higher on portrait mode to avoid clipping into waves
+            // --- MOBILE ZOOM & LIFT FIX ---
+            // If aspect < 1.0 (Portrait Mode), the screen is tall.
+            // We Zoom Out (uv * 2.5) to widen the FOV.
+            // We Lift Camera (camHeight = 8.0) to look down from higher up.
             float camHeight = 3.5;
+            
             if (aspect < 1.0) {
-                uv *= 1.8; 
-                camHeight = 5.5; 
+                uv *= 2.5;       // Stronger zoom out to show horizon
+                camHeight = 8.0; // Lift camera higher to avoid "stuck in wave" look
             }
 
             float time = iGlobalTime * 0.3;
                 
             vec3 ori = vec3(0.0, camHeight, time*5.0);
             vec3 dir = normalize(vec3(uv.xy, -2.0)); 
-            dir.z += length(uv) * 0.14;
+            dir.z += length(uv) * 0.15;
             dir = normalize(dir);
             
             vec3 p;
@@ -331,7 +393,6 @@
             vec3 dist = p - ori;
             vec3 n = getNormal(p, dot(dist,dist) * EPSILON_NRM);
             
-            // Moonlight direction
             vec3 light = normalize(vec3(0.0, 1.0, 0.8)); 
             
             vec3 color = mix(
@@ -340,31 +401,39 @@
                 pow(smoothstep(0.0,-0.05,dir.y),0.3)
             );
             
-            // Final safety clamp
+            // --- CRITICAL MOBILE FIX: FINAL COLOR CLAMP ---
+            // Ensure no negative colors before gamma correction
             color = max(color, 0.0);
             
-            gl_FragColor = vec4(pow(color,vec3(0.75)), 1.0);
+            // Slightly brighter gamma for mobile (0.7 vs 0.8) to fight the darkness
+            gl_FragColor = vec4(pow(color,vec3(0.7)), 1.0);
         }
     </script>
 
     <script>
+        // --- 1. THREE.JS SCENE SETUP ---
         const container = document.getElementById('webgl-container');
         
-        // Mobile height fix for browser bars
+        // CRITICAL FIX: Safe height function to handle mobile address bars
         const getMobileHeight = () => document.documentElement.clientHeight || window.innerHeight;
 
+        // CRITICAL FIX: Mobile-optimized renderer settings
         const renderer = new THREE.WebGLRenderer({ 
             antialias: true, 
             alpha: false,
-            powerPreference: "high-performance"
+            powerPreference: "high-performance",
+            precision: "highp" // Changed to highp for quality
         });
         
-        // Prevent mobile overheating by clamping Pixel Ratio
+        // CRITICAL FIX: Clamp Pixel Ratio to max 2.0 to prevent mobile overheat/crash
         const DPR = Math.min(window.devicePixelRatio, 2);
         renderer.setPixelRatio(DPR);
         
+        // Use safe height
         renderer.setSize(window.innerWidth, getMobileHeight(), false);
         renderer.outputEncoding = THREE.sRGBEncoding;
+        
+        // CRITICAL FIX: Disable shadows for performance/stability on mobile
         renderer.shadowMap.enabled = false; 
         renderer.autoClear = false;
         
@@ -385,23 +454,24 @@
         });
         sceneBG.add(new THREE.Mesh(geometryBG, materialBG));
 
-        // 3D SCENE (Lights & Objects)
         const scene3D = new THREE.Scene();
-        scene3D.fog = new THREE.FogExp2(0x020203, 0.035);
+        scene3D.fog = new THREE.FogExp2(0x05070a, 0.035);
 
         const camera3D = new THREE.PerspectiveCamera(60, window.innerWidth/getMobileHeight(), 0.1, 1000);
         camera3D.position.set(0, -6.5, 6.0); 
         camera3D.lookAt(0, 0.5, -20);
 
-        // Dark Moonlight
-        const moonLight = new THREE.DirectionalLight(0x445577, 0.5); 
+        const moonLight = new THREE.DirectionalLight(0x667799, 0.25); 
         moonLight.position.set(-10, 20, -10);
+        // Shadows disabled for mobile stability
         scene3D.add(moonLight);
 
-        // Warm Lantern Light (Contrast)
-        const lanternLight = new THREE.PointLight(0xff4400, 1.2, 25); 
+        const lanternLight = new THREE.PointLight(0xff5500, 1.0, 20); 
         lanternLight.position.set(0, 5, 2);
         scene3D.add(lanternLight);
+
+        const ambient = new THREE.AmbientLight(0x020205, 0.1); 
+        scene3D.add(ambient);
 
         const canvas = document.getElementById('rain-canvas');
         const ctx = canvas.getContext('2d');
@@ -409,16 +479,16 @@
         canvas.height = getMobileHeight();
 
         const drops = [];
-        const rainCount = 200; // Reduced slightly for mobile performance
+        const rainCount = 300;
 
         class Drop {
             constructor() { this.reset(); }
             reset() {
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * -canvas.height;
-                this.speed = Math.random() * 8 + 12; 
+                this.speed = Math.random() * 10 + 15; 
                 this.len = Math.random() * 15 + 10;
-                this.opacity = Math.random() * 0.15 + 0.05;
+                this.opacity = Math.random() * 0.2 + 0.05;
             }
             update() {
                 this.y += this.speed;
@@ -426,10 +496,10 @@
             }
             draw() {
                 ctx.beginPath();
-                ctx.strokeStyle = `rgba(180, 200, 230, ${this.opacity})`;
+                ctx.strokeStyle = `rgba(200, 210, 255, ${this.opacity})`;
                 ctx.lineWidth = 1;
                 ctx.moveTo(this.x, this.y);
-                ctx.lineTo(this.x + 1, this.y + this.len);
+                ctx.lineTo(this.x + 2, this.y + this.len);
                 ctx.stroke();
             }
         }
@@ -455,11 +525,15 @@
         }
         animate();
 
+        // CRITICAL FIX: Correct mobile resize handling
         window.addEventListener('resize', () => {
             const w = window.innerWidth;
             const h = getMobileHeight();
             
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            // Re-apply DPR clamp on resize (e.g. if user moves between monitors)
+            const safeDPR = Math.min(window.devicePixelRatio, 2);
+            renderer.setPixelRatio(safeDPR);
+            
             renderer.setSize(w, h, false);
             uniformsBG.iResolution.value.set(w, h);
             
@@ -470,20 +544,25 @@
             canvas.height = h;
         });
 
-        // PLAYER LOGIC
+        // --- 2. MUSIC PLAYER INTEGRATION (VANILLA JS) ---
+        
+        // Initialize Lucide Icons
         lucide.createIcons();
 
+        // Playlist Data
         const PLAYLIST = [
             { title: "Glum - Knep list och långa fingrar", src: "Knep_List_och_Långa_Fingrar.mp3" }
         ];
 
+        // State Variables
         let currentTrackIndex = 0;
         let isPlaying = false;
         let volume = 0.5;
         let audio = new Audio(PLAYLIST[0].src);
         audio.volume = volume;
 
-        // Auto-unlock audio on mobile touch
+        // CRITICAL FIX: Mobile Auto-Play/Audio Context Unlock
+        // This silently attempts to unlock audio on the first interaction
         function unlockMobile() {
             audio.play().then(() => {
                 audio.pause();
@@ -492,6 +571,7 @@
         }
         window.addEventListener("pointerdown", unlockMobile, { once: true });
 
+        // DOM Elements
         const playBtn = document.getElementById('play-btn');
         const playIcon = document.getElementById('play-icon');
         const prevBtn = document.getElementById('prev-btn');
@@ -504,8 +584,11 @@
         const muteBtn = document.getElementById('mute-btn');
         const volIcon = document.getElementById('vol-icon');
 
+        // Initialize UI
         trackTitle.innerText = PLAYLIST[0].title;
         updateVolumeUI(volume);
+
+        // --- Functions ---
 
         function togglePlay() {
             if (audio.paused) {
@@ -515,11 +598,13 @@
                 audio.pause();
                 playIcon.setAttribute('data-lucide', 'play');
             }
+            // Need to refresh icons after attribute change
             lucide.createIcons();
             isPlaying = !audio.paused;
         }
 
         function loadTrack(index) {
+            // Constrain index
             if (index < 0) index = PLAYLIST.length - 1;
             if (index >= PLAYLIST.length) index = 0;
             
@@ -527,6 +612,7 @@
             audio.src = PLAYLIST[currentTrackIndex].src;
             trackTitle.innerText = PLAYLIST[currentTrackIndex].title;
             
+            // Auto play if it was already playing
             if (isPlaying) {
                 audio.play();
                 playIcon.setAttribute('data-lucide', 'pause');
@@ -562,6 +648,7 @@
             volBar.value = val;
             volFill.style.width = `${val * 100}%`;
             
+            // Icon logic
             let iconName = 'volume-2';
             if (val === 0) iconName = 'volume-x';
             else if (val < 0.5) iconName = 'volume-1';
@@ -572,22 +659,33 @@
 
         function toggleMute() {
             if (audio.volume > 0) {
+                // Mute
                 audio.volume = 0;
                 updateVolumeUI(0);
             } else {
+                // Unmute (restore prev volume or default)
                 const newVol = volume || 0.5;
                 audio.volume = newVol;
                 updateVolumeUI(newVol);
             }
         }
 
+        // --- Event Listeners ---
+
         playBtn.addEventListener('click', togglePlay);
+        
         nextBtn.addEventListener('click', () => loadTrack(currentTrackIndex + 1));
+        
         prevBtn.addEventListener('click', () => loadTrack(currentTrackIndex - 1));
+        
         audio.addEventListener('timeupdate', updateProgress);
+        
         audio.addEventListener('ended', () => loadTrack(currentTrackIndex + 1));
+        
         progressBar.addEventListener('input', seek);
+        
         volBar.addEventListener('input', updateVolume);
+        
         muteBtn.addEventListener('click', toggleMute);
 
     </script>
